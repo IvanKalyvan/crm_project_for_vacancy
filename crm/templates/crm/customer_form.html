@@ -1,82 +1,56 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Добавить клиента{% endblock %}</title>
-
+    <title>Обновление клиента</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@2.0.0" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.18/dist/cdn.min.js" defer></script>
-
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body class="container my-5">
+<body>
 
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3>{% block client_name %}Создать клиента{% endblock %}</h3>
-                </div>
-                <div class="card-body">
-                    <form
-                        method="post"
-                        hx-post="{% url 'customer_create' %}"
-                        hx-target="#customer-display"
-                        hx-swap="outerHTML"
-                        x-data="{ loading: false, name: '', email: '', phone: '', company: '' }"
-                        @submit="loading = true"
-                        hx-on="htmx:after-request: loading = false; name = ''; email = ''; phone = ''; company = '';"
-                    >
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="id_name" class="form-label">Имя</label>
-                            <input type="text" name="name" id="id_name" class="form-control" x-model="name" required>
+<div class="container mt-5">
+    <h1 class="mb-4">Обновление клиента</h1>
 
-                            <label for="id_email" class="form-label mt-2">Email</label>
-                            <input type="email" name="email" id="id_email" class="form-control" x-model="email" required>
-
-                            <label for="id_phone" class="form-label mt-2">Телефон</label>
-                            <input type="text" name="phone" id="id_phone" class="form-control" x-model="phone" required>
-
-                            <label for="id_company" class="form-label mt-2">Компания</label>
-                            <input type="text" name="company" id="id_company" class="form-control" x-model="company" required>
-                        </div>
-                        <button
-                            type="submit"
-                            class="btn btn-primary w-100 d-flex align-items-center justify-content-center"
-                            :disabled="loading"
-                        >
-                            <span x-show="!loading">Сохранить</span>
-                            <span x-show="loading" x-cloak class="spinner-border spinner-border-sm"></span>
-                        </button>
-                    </form>
-                    <a href="{% url 'customer_list' %}" class="btn btn-secondary mt-3 w-100">Отмена</a>
-                </div>
-            </div>
+    {% if errors %}
+        <div class="alert alert-danger mt-3">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
         </div>
-    </div>
+    {% endif %}
 
-    <!-- Здесь будут отображаться данные новых клиентов -->
-    <div id="customer-display" x-data="{ customer: null, customers: [] }">
-        <div>
-            {% for customer in customers %}
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ customer.name }}</h5>
-                        <p class="card-text">{{ customer.email }}</p>
-                        <p class="card-text">{{ customer.phone }}</p>
-                        <p class="card-text">{{ customer.company }}</p>
-                    </div>
-                </div>
-            {% empty %}
-                <p>Нет клиентов для отображения.</p>
-            {% endfor %}
+    <!-- Форма с HTMX -->
+    <form method="post" action="{% url 'customer_create' %}"
+          hx-target="#response-message" hx-swap="outerHTML" hx-on="htmx:beforeRequest: showLoading" hx-on="htmx:afterRequest: hideLoading">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="id_name" class="form-label">Имя</label>
+            <input type="text" id="id_name" name="name" value="{{ form.name.value }}" class="form-control" required>
         </div>
+
+        <div class="mb-3">
+            <label for="id_email" class="form-label">Email</label>
+            <input type="email" id="id_email" name="email" value="{{ form.email.value }}" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="id_phone" class="form-label">Телефон</label>
+            <input type="text" id="id_phone" name="phone" value="{{ form.phone.value }}" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Обновить клиента</button>
+    </form>
+
+    <!-- Место для отображения сообщений -->
+    <div id="response-message">
+        <!-- Ошибки или сообщение об успешном обновлении появятся здесь -->
     </div>
+</div>
 
 </body>
 </html>

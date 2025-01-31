@@ -18,7 +18,6 @@
                 <th>Имя</th>
                 <th>Email</th>
                 <th>Телефон</th>
-                <th>Компания</th>
                 <th>Действия</th>
             </tr>
         </thead>
@@ -28,7 +27,6 @@
                 <td>{{ customer.name }}</td>
                 <td>{{ customer.email }}</td>
                 <td>{{ customer.phone }}</td>
-                <td>{{ customer.company }}</td>
                 <td>
                     <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-info btn-sm">Подробнее</a>
                     <a href="{% url 'customer_update' customer.pk %}" class="btn btn-warning btn-sm">Редактировать</a>
