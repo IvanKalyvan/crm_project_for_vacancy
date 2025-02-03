@@ -1,6 +1,9 @@
 from django.db import models
 
+from custom_auth.models import User
+
 class Customer(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='customers')  # Связь с User
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15)

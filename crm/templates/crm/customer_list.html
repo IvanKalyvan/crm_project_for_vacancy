@@ -1,48 +1,157 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Список клиентов</title>
+    <title>Client list</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.5/dist/htmx.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.18/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+    <style>
+        .sidebar {
+            width: 220px;
+            transition: transform 0.3s ease, width 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .sidebar-toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        .user-email {
+            word-break: break-word;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
 </head>
-<body class="container my-5">
+<body class="container-fluid my-5" x-data="bulkDelete()">
 
-    <h1 class="mb-4">Список клиентов</h1>
+    <button @click="toggleSidebar" class="btn btn-primary sidebar-toggle-btn">☰ Menu</button>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Имя</th>
-                <th>Email</th>
-                <th>Телефон</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody id="customer-list">
-            {% for customer in customers %}
-            <tr id="customer-{{ customer.pk }}">
-                <td>{{ customer.name }}</td>
-                <td>{{ customer.email }}</td>
-                <td>{{ customer.phone }}</td>
-                <td>
-                    <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-info btn-sm">Подробнее</a>
-                    <a href="{% url 'customer_update' customer.pk %}" class="btn btn-warning btn-sm">Редактировать</a>
-                    <a href="{% url 'customer_delete' customer.pk %}" class="btn btn-danger btn-sm">Удалить</a>
+    <div class="d-flex">
 
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">Нет клиентов</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div :class="{'sidebar-hidden': !sidebarVisible}" class="sidebar bg-light p-3 border-end">
+            <button @click="toggleSidebar" class="btn btn-secondary mb-3 w-100">Close menu</button>
+            <div class="mb-3">
+                <h5 class="user-email">{{ user.email }}</h5>
+            </div>
+            <form action="{% url 'auth:logout' %}" method="POST" @submit.prevent="logout">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger w-100">Logout</button>
+            </form>
+        </div>
 
-    <a href="{% url 'customer_create' %}" class="btn btn-success">Добавить клиента</a>
+        <div class="flex-grow-1 p-3">
+            <h1 class="mb-4">Client list</h1>
+
+            <button x-show="!inDeleteMode" @click="startDeleteMode" class="btn btn-danger mb-3">
+                Enable bulk deletion
+            </button>
+
+            <div x-show="inDeleteMode" class="mb-3">
+                <button @click="deleteSelected" class="btn btn-danger">Confirm removing</button>
+                <button @click="cancelDeleteMode" class="btn btn-secondary">Cancel</button>
+            </div>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" x-show="inDeleteMode" x-model="selectAll" @change="toggleSelectAll" /></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customer-list">
+                    {% for customer in customers %}
+                    <tr id="customer-{{ customer.pk }}">
+                        <td><input type="checkbox" class="select-customer" :value="{{ customer.pk }}" x-model="selectedIds" :checked="isChecked({{ customer.pk }})" x-bind:disabled="!inDeleteMode" /></td>
+                        <td>{{ customer.name }}</td>
+                        <td>{{ customer.email }}</td>
+                        <td>{{ customer.phone }}</td>
+                        <td>
+                            <a href="{% url 'crm:customer_detail' customer.pk %}" class="btn btn-info btn-sm">Details</a>
+                            <a href="{% url 'crm:customer_update' customer.pk %}" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="{% url 'crm:customer_delete' customer.pk %}" class="btn btn-danger btn-sm">Remove</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center">No clients</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <a href="{% url 'crm:customer_create' %}" class="btn btn-success">Add client</a>
+        </div>
+    </div>
+
+    <script>
+        function bulkDelete() {
+            return {
+                selectedIds: [],
+                selectAll: false,
+                inDeleteMode: false,
+                sidebarVisible: false,
+
+                toggleSidebar() {
+                    this.sidebarVisible = !this.sidebarVisible;
+                },
+                toggleSelectAll() {
+                    this.selectedIds = this.selectAll ? [...document.querySelectorAll('.select-customer')].map(checkbox => checkbox.value) : [];
+                },
+                isChecked(customerId) {
+                    return this.selectedIds.includes(customerId.toString());
+                },
+                startDeleteMode() {
+                    this.inDeleteMode = true;
+                },
+                cancelDeleteMode() {
+                    this.inDeleteMode = false;
+                    this.selectedIds = [];
+                    this.selectAll = false;
+                },
+                deleteSelected() {
+                    fetch("{% url 'crm:customer_list' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}',
+                        },
+                        body: JSON.stringify({ ids: this.selectedIds })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.selectedIds.forEach(id => document.getElementById(`customer-${id}`).remove());
+                            this.cancelDeleteMode();
+                        } else {
+                            alert('Error while removing');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Request error');
+                    });
+                },
+                logout() {
+                    fetch("{% url 'auth:logout' %}", {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                    })
+                    .then(() => location.reload())
+                    .catch(error => console.error('Logout error:', error));
+                }
+            };
+        }
+    </script>
 
 </body>
 </html>
