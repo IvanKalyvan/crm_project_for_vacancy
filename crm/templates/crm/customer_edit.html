@@ -15,6 +15,17 @@
 
 <body>
     <div class="container my-5">
+
+        {% if errors %}
+            <div class="alert alert-danger mt-3">
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         <h2>Edit client: {{ object.name }}</h2>
 
         <form method="post">

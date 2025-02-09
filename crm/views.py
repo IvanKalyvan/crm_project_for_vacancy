@@ -2,8 +2,9 @@ import json
 
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect, JsonResponse, Http404
+from django.contrib import messages
 
 from .models import Customer
 from .forms import CustomerForm
@@ -15,7 +16,10 @@ class CustomerListView(ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            print(f"User {request.user.email} authenticatate.")
+            print(f"User {request.user.email} authenticated.")
+            if not request.user.email_verified:
+                messages.error(request, "Your email is not verified. Please verify your email.")
+                return redirect("auth:login")
         else:
             print("User not authenticated.")
         return super().dispatch(request, *args, **kwargs)
@@ -83,7 +87,7 @@ class CustomerCreateView(CreateView):
 class CustomerUpdateView(UpdateView):
     model = Customer
     template_name = 'crm/customer_edit.html'
-    fields = ['name', 'email', 'phone']
+    form_class = CustomerForm
 
     def get_object(self, queryset=None):
         obj = super().get_object(queryset=queryset)
@@ -91,9 +95,15 @@ class CustomerUpdateView(UpdateView):
             raise Http404("You cannot edit this entry.")
         return obj
 
+    def form_invalid(self, form):
+        errors = []
+        for field, error_list in form.errors.items():
+            for error in error_list:
+                errors.append(f"{field.capitalize()}: {error}")
+        return render(self.request, 'crm/customer_edit.html', {'form': form, 'errors': errors})
+
     def get_success_url(self):
         return reverse_lazy('crm:customer_detail', kwargs={'pk': self.object.pk})
-
 
 class CustomerDeleteView(DeleteView):
     model = Customer
@@ -116,3 +126,4 @@ class CustomerDeleteView(DeleteView):
                 return JsonResponse({'success': True, 'message': 'Success'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
